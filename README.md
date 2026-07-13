@@ -16,4 +16,4 @@ This project currently demonstrates the retrieval pipeline. The LLM generation s
 
 ## Demo Screenshot
 
-![RAG Demo](screenshots/demo_ques.png)
+![RAG Demo](screenshots/demo_question.png)
