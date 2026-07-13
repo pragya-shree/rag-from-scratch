@@ -13,3 +13,7 @@ Features
 
 Current Version
 This project currently demonstrates the retrieval pipeline. The LLM generation step has been disabled because the focus is on understanding the retrieval process from first principles.
+
+## Demo Screenshot
+
+![RAG Demo](screenshots/demo_ques.png)
