@@ -379,3 +379,6 @@ Contributions and suggestions are welcome.
 Feel free to open issues or submit pull requests.
 
 ---
+# 🚀 RAG From Scratch — Local Document Question Answering System
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
