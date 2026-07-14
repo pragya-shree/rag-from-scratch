@@ -1,101 +1,26 @@
-# """Step 6 of the pipeline: send retrieved context + question to Gemini."""
+"""Step 6 of the pipeline: send retrieved context + question to the LLM.
 
-# import os
-# import logging
-# import google.generativeai as genai
-# from dotenv import load_dotenv
-# from src.config import GEMINI_MODEL
+Generation runs locally through Ollama. Two entry points are provided:
 
-# logger = logging.getLogger(__name__)
+- generate_answer()        : blocking call, returns the full answer text.
+- generate_answer_stream() : generator, yields the answer as it's produced.
+                              Falls back to generate_answer() (yielded as
+                              one chunk) if streaming can't be started.
 
-# load_dotenv()
+The prompt intentionally does NOT ask the model to cite sources inline —
+citations are computed separately from chunk metadata and shown in a
+"Sources" section after the answer, so the generated text stays clean.
 
-# genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-# PROMPT_TEMPLATE = """You are a precise assistant. Answer the question using
-# ONLY the context below. Do not use outside knowledge and do not guess.
-# If the answer is not contained in the context, reply exactly:
-# "I don't know based on the provided document."
-
-# Context:
-# {context}
-
-# Question: {question}
-
-# Answer:"""
-
-
-# def build_prompt(question, chunks):
-#     context = "\n\n".join(f"[Page {c['page']}] {c['text']}" for c in chunks)
-#     return PROMPT_TEMPLATE.format(context=context, question=question)
-
-
-# def ask(question, chunks):
-#     prompt = build_prompt(question, chunks)
-#     model = genai.GenerativeModel(GEMINI_MODEL)
-#     logger.info("Sending prompt to Gemini (%s)", GEMINI_MODEL)
-#     response = model.generate_content(prompt)
-#     return response.text
-
-# """Step 6 of the pipeline: send retrieved context + question to Gemini.
-
-# Each chunk is labeled with its source filename and page number, so the
-# model can synthesize an answer across multiple PDFs and you can trace
-# each fact back to its origin.
-# """
-
-# import os
-# import logging
-# import google.generativeai as genai
-# from dotenv import load_dotenv
-# from src.config import GEMINI_MODEL
-
-# logger = logging.getLogger(__name__)
-# load_dotenv()
-
-# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# PROMPT_TEMPLATE = """You are a precise assistant answering questions using
-# excerpts from one or more documents. Use ONLY the context below. Do not
-# use outside knowledge and do not guess. Information may come from
-# different source files — combine it when relevant. If the answer is not
-# contained in the context, reply exactly:
-# "I don't know based on the provided documents."
-
-# When you use a fact, mention which source it came from, e.g. (source.pdf, page 3).
-
-# Context:
-# {context}
-
-# Question: {question}
-
-# Answer:"""
-
-
-# def build_prompt(question, chunks):
-#     context = "\n\n".join(
-#         f"[{c['filename']}, page {c['page']}] {c['text']}" for c in chunks
-#     )
-#     return PROMPT_TEMPLATE.format(context=context, question=question)
-
-
-# def generate_answer(question, chunks):
-#     prompt = build_prompt(question, chunks)
-#     model = genai.GenerativeModel(GEMINI_MODEL)
-#     logger.info("Sending prompt to Gemini (%s)", GEMINI_MODEL)
-#     response = model.generate_content(prompt)
-#     return response.text
-
-"""Step 6 of the pipeline: send retrieved context + question to Ollama."""
+Both entry points accept an optional `history` — a list of recent
+(question, answer) tuples — which is folded into the prompt so the model
+has short-term conversational context.
+"""
 
 import logging
-import requests
-
-from src.config import OLLAMA_HOST, OLLAMA_MODEL
+import ollama
+from src.config import OLLAMA_MODEL
 
 logger = logging.getLogger(__name__)
-
-OLLAMA_URL = f"{OLLAMA_HOST}/api/generate"
 
 PROMPT_TEMPLATE = """You are a precise assistant answering questions using
 excerpts from one or more documents. Use ONLY the context below. Do not
@@ -104,42 +29,78 @@ different source files — combine it when relevant. If the answer is not
 contained in the context, reply exactly:
 "I don't know based on the provided documents."
 
-When you use a fact, mention which source it came from, e.g. (source.pdf, page 3).
-
-Context:
+{history_block}Context:
 {context}
 
 Question: {question}
 
-Answer:
-"""
+Answer:"""
 
 
-def build_prompt(question, chunks):
+def format_history(history):
+    """Turn a list of (question, answer) tuples into a prompt-ready block.
+    Returns "" when there's no history, so the prompt layout is unaffected.
+    """
+    if not history:
+        return ""
+    exchanges = "\n\n".join(f"Q: {q}\nA: {a}" for q, a in history)
+    return f"Previous conversation:\n{exchanges}\n\n"
+
+
+def build_prompt(question, chunks, history=None):
     context = "\n\n".join(
-        f"[{c['filename']}, page {c['page']}] {c['text']}"
-        for c in chunks
+        f"[{c['filename']}, page {c['page']}] {c['text']}" for c in chunks
     )
+    history_block = format_history(history)
     return PROMPT_TEMPLATE.format(
-        context=context,
-        question=question,
+        context=context, question=question, history_block=history_block
     )
 
 
-def generate_answer(question, chunks):
-    prompt = build_prompt(question, chunks)
+def format_sources(chunks):
+    """Return deduplicated sources grouped by document:
+    [(filename, [page, page, ...]), ...], sorted by filename then page.
+    """
+    pages_by_file = {}
+    for c in chunks:
+        pages_by_file.setdefault(c["filename"], set()).add(c["page"])
 
-    logger.info("Sending prompt to Ollama (%s)", OLLAMA_MODEL)
+    return [
+        (filename, sorted(pages))
+        for filename, pages in sorted(pages_by_file.items())
+    ]
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": OLLAMA_MODEL,
-            "prompt": prompt,
-            "stream": False,
-        },
-    )
 
-    response.raise_for_status()
+def generate_answer(question, chunks, history=None):
+    """Blocking call: returns the full generated answer as a string."""
+    prompt = build_prompt(question, chunks, history=history)
+    logger.info("Generating answer via Ollama (model=%s)", OLLAMA_MODEL)
+    response = ollama.generate(model=OLLAMA_MODEL, prompt=prompt, stream=False)
+    return response.get("response", "").strip()
 
-    return response.json()["response"]
+
+def generate_answer_stream(question, chunks, history=None):
+    """Generator: yields the answer text in chunks as Ollama streams it.
+
+    If the stream fails before producing any output (e.g. streaming is
+    unsupported by the running Ollama version, or the initial connection
+    fails), falls back to a single non-streaming call and yields the
+    whole answer as one chunk. A failure *after* partial output has
+    already been yielded is re-raised rather than silently retried,
+    since re-generating would duplicate text the user already saw.
+    """
+    prompt = build_prompt(question, chunks, history=history)
+    received_any = False
+    try:
+        logger.info("Generating answer via Ollama (streaming, model=%s)", OLLAMA_MODEL)
+        for part in ollama.generate(model=OLLAMA_MODEL, prompt=prompt, stream=True):
+            token = part.get("response", "")
+            if token:
+                received_any = True
+                yield token
+    except Exception as e:
+        if received_any:
+            logger.error("Streaming interrupted after partial output: %s", e)
+            raise
+        logger.warning("Streaming unavailable (%s); falling back to non-streaming", e)
+        yield generate_answer(question, chunks, history=history)

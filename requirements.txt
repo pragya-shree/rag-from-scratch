@@ -1,13 +1,7 @@
-# pypdf
-# sentence-transformers
-# faiss-cpu
-# google-generativeai
-# python-dotenv
-# numpy
-
 pymupdf
 sentence-transformers
 faiss-cpu
-google-generativeai
+ollama
 python-dotenv
 numpy
+rank-bm25
