@@ -12,7 +12,7 @@ from src.embedder import embed_texts
 from src.vectorstore import build_index, save, load
 from src.retriever import retrieve
 from src.generator import generate_answer
-from src.config import TOP_K
+from src.config import TOP_K, ENABLE_GENERATION
 
 logger = logging.getLogger(__name__)
 
@@ -43,5 +43,10 @@ def answer_question(question, top_k=TOP_K):
     """
     index, chunks = load()
     retrieved = retrieve(question, index, chunks, top_k=top_k)
+    if not ENABLE_GENERATION:
+        return retrieved, "Generation is temporarily disabled."
+
     answer = generate_answer(question, retrieved)
     return retrieved, answer
+    # answer = generate_answer(question, retrieved)
+    # return retrieved, answer

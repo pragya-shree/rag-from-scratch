@@ -29,17 +29,21 @@ INDEX_PATH = "storage/index.faiss"
 CHUNKS_PATH = "storage/chunks.json"
 
 # --- Chunking ---
-CHUNK_SIZE = 800       # max characters per chunk
-CHUNK_OVERLAP = 100    # characters of overlap when a paragraph must be split
+CHUNK_SIZE = 500       # max characters per chunk
+CHUNK_OVERLAP = 80    # characters of overlap when a paragraph must be split
 
 # --- Embeddings ---
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # --- Retrieval ---
-TOP_K = 3
+TOP_K = 5
 
-# --- Gemini ---
-GEMINI_MODEL = "gemini-2.0-flash"
+# --- Generation ---
+ENABLE_GENERATION = True
+
+# --- Ollama ---
+OLLAMA_HOST = "http://localhost:11434"
+OLLAMA_MODEL = "llama3.2:3b"
 
 # --- Logging ---
 LOG_LEVEL = "INFO"
