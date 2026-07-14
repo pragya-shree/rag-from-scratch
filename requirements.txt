@@ -1,4 +1,11 @@
-pypdf
+# pypdf
+# sentence-transformers
+# faiss-cpu
+# google-generativeai
+# python-dotenv
+# numpy
+
+pymupdf
 sentence-transformers
 faiss-cpu
 google-generativeai
