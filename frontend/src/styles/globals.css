@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/*
+  Design tokens for "Marginalia" — a document Q&A interface.
+  Tailwind v4 reads custom design tokens straight from this @theme
+  block, so there is no separate tailwind.config.js needed for colors,
+  fonts, or radii. Utilities like `bg-ink-900` or `font-display` below
+  are generated automatically from these variables.
+*/
+@theme {
+  /* --- Color: deep ink background with a warm "highlighter" accent --- */
+  --color-ink-950: #0b0e16; /* app background */
+  --color-ink-900: #12151f; /* sidebar */
+  --color-surface-800: #171b28; /* cards, message surfaces */
+  --color-surface-700: #1f2436; /* inputs, hover states */
+  --color-border-800: #262c40;
+
+  --color-text-primary: #e8eaf2;
+  --color-text-secondary: #8b91a8;
+  --color-text-muted: #5d6278;
+
+  --color-accent-gold: #eab449; /* highlighter accent */
+  --color-accent-gold-soft: #eab44926; /* translucent highlight wash */
+  --color-accent-teal: #59c6c9; /* citations / links */
+
+  /* --- Type: literary display serif + Inter UI + Plex Mono utility --- */
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Visible keyboard focus, kept subtle but unmistakable */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-gold);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-gold-soft);
+    color: var(--color-text-primary);
+  }
+
+  /* Slim, quiet scrollbars that match the ink palette */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-800);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-text-muted);
+  }
+}
+
+@layer utilities {
+  /* Respect reduced-motion preferences project-wide */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
