@@ -8,7 +8,7 @@ export default function LoadingSpinner({ size = 16, className = "" }) {
   return (
     <Loader2
       size={size}
-      className={`animate-spin text-accent-gold ${className}`}
+      className={`animate-spin text-accent-cyan ${className}`}
       aria-hidden="true"
     />
   );

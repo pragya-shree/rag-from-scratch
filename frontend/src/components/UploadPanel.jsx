@@ -1,19 +1,19 @@
 import { useRef, useState } from "react";
-import { FileText, CheckCircle2, AlertCircle, Upload } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, UploadCloud, Trash2 } from "lucide-react";
 import LoadingSpinner from "./LoadingSpinner";
 
 /**
  * Drag-and-drop / click-to-browse PDF upload, plus the list of
- * documents already ingested. There is no remove/delete action here:
- * the backend has no DELETE /documents endpoint, so a document, once
- * uploaded, stays for the session — matching what the API supports.
+ * documents already ingested — each with a delete action.
  */
 export default function UploadPanel({
   documents,
   isLoading,
   isUploading,
   uploadProgress,
+  deletingFilename,
   onUpload,
+  onRemove,
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: "success" | "error", message }
@@ -38,12 +38,24 @@ export default function UploadPanel({
     setTimeout(() => setFeedback(null), 5000);
   };
 
+  const handleRemove = async (filename) => {
+    const confirmed = window.confirm(
+      `Delete "${filename}"? The index will be rebuilt from the remaining documents.`
+    );
+    if (!confirmed) return;
+
+    setFeedback(null);
+    const result = await onRemove(filename);
+    if (result.success) {
+      setFeedback({ type: "success", message: `"${filename}" was deleted.` });
+    } else {
+      setFeedback({ type: "error", message: result.message });
+    }
+    setTimeout(() => setFeedback(null), 5000);
+  };
+
   return (
     <div className="space-y-3">
-      <p className="px-0.5 text-xs font-medium uppercase tracking-wide text-text-muted">
-        Documents
-      </p>
-
       {/* Drop zone */}
       <div
         role="button"
@@ -60,18 +72,18 @@ export default function UploadPanel({
           setIsDragging(false);
           handleFiles(e.dataTransfer.files);
         }}
-        className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition-colors ${
+        className={`relative flex cursor-pointer flex-col items-center gap-2.5 overflow-hidden rounded-2xl border border-dashed px-4 py-7 text-center transition-all duration-300 ${
           isDragging
-            ? "border-accent-gold bg-accent-gold-soft"
-            : "border-border-800 bg-surface-800/50 hover:border-text-muted"
+            ? "glow-purple scale-[1.02] border-accent-purple bg-accent-purple/10"
+            : "border-white/15 bg-white/[0.02] hover:border-accent-cyan/40 hover:bg-white/[0.04]"
         }`}
       >
         {isUploading ? (
           <>
-            <LoadingSpinner size={20} />
-            <div className="h-1 w-full overflow-hidden rounded-full bg-surface-700">
+            <LoadingSpinner size={22} />
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-accent-gold transition-all duration-200"
+                className="h-full rounded-full bg-gradient-to-r from-accent-purple to-accent-cyan transition-all duration-200"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -79,9 +91,11 @@ export default function UploadPanel({
           </>
         ) : (
           <>
-            <Upload size={20} className="text-text-secondary" strokeWidth={1.75} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent-purple/25 to-accent-cyan/25">
+              <UploadCloud size={17} className="text-accent-lavender" strokeWidth={1.75} />
+            </div>
             <p className="text-xs leading-relaxed text-text-secondary">
-              <span className="text-accent-gold">Click to upload</span> or drag a PDF here
+              <span className="gradient-text font-medium">Click to upload</span> or drag a PDF here
             </p>
           </>
         )}
@@ -94,20 +108,20 @@ export default function UploadPanel({
         />
       </div>
 
-      {/* Upload feedback */}
+      {/* Upload/delete feedback */}
       {feedback && (
         <div
           role="status"
-          className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${
+          className={`animate-fade-in flex items-start gap-2 rounded-xl px-3 py-2 text-xs leading-relaxed ${
             feedback.type === "success"
-              ? "bg-accent-gold-soft text-text-primary"
-              : "bg-red-950/40 text-red-300"
+              ? "border border-accent-cyan/20 bg-accent-cyan/[0.08] text-text-primary"
+              : "border border-accent-pink/20 bg-accent-pink/[0.08] text-accent-pink"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-accent-gold" />
+            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-accent-cyan" />
           ) : (
-            <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-400" />
+            <AlertCircle size={14} className="mt-0.5 shrink-0 text-accent-pink" />
           )}
           <span>{feedback.message}</span>
         </div>
@@ -120,18 +134,32 @@ export default function UploadPanel({
           Loading documents…
         </div>
       ) : documents.length > 0 ? (
-        <ul className="space-y-1.5">
-          {documents.map((doc) => (
-            <li
-              key={doc.filename}
-              className="flex items-center gap-2 rounded-lg px-2.5 py-2"
-            >
-              <FileText size={14} className="shrink-0 text-text-muted" />
-              <span className="truncate text-sm text-text-secondary">
-                {doc.filename}
-              </span>
-            </li>
-          ))}
+        <ul className="space-y-2">
+          {documents.map((doc) => {
+            const isDeleting = deletingFilename === doc.filename;
+            return (
+              <li
+                key={doc.filename}
+                className="glass-card group flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-purple/30"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-purple/20 to-accent-cyan/20">
+                  <FileText size={13} className="text-accent-lavender" />
+                </div>
+                <span className="truncate text-sm text-text-secondary" title={doc.filename}>
+                  {doc.filename}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(doc.filename)}
+                  disabled={isDeleting}
+                  aria-label={`Delete ${doc.filename}`}
+                  className="ml-auto shrink-0 rounded-md p-1 text-text-muted opacity-0 transition-opacity hover:text-accent-pink disabled:cursor-not-allowed disabled:opacity-100 group-hover:opacity-100"
+                >
+                  {isDeleting ? <LoadingSpinner size={13} /> : <Trash2 size={13} />}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="px-2.5 py-1 text-xs text-text-muted">

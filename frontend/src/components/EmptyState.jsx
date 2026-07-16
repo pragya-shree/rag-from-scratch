@@ -1,46 +1,70 @@
-import { BookOpenText, Upload, MessageCircleQuestion, Quote } from "lucide-react";
+import { Sparkles, Upload, Quote } from "lucide-react";
+
+const EXAMPLE_QUESTIONS = [
+  "Summarize the key points of this document",
+  "What are the main conclusions?",
+  "Are there any numbers or statistics mentioned?",
+];
 
 /**
- * Shown before the first question is asked. Walks through the app's
- * three-step flow as required: upload, ask, get cited answers.
+ * Landing state shown before the first question is asked. Clicking an
+ * example question sends it immediately via onExampleClick (wired to
+ * the same sendMessage the chat input uses) rather than just filling
+ * the input box — one fewer step for a first-time user.
  */
-export default function EmptyState({ hasDocuments }) {
-  const steps = [
-    { icon: Upload, text: "Upload one or more PDFs from the sidebar." },
-    { icon: MessageCircleQuestion, text: "Ask a question about their contents." },
-    { icon: Quote, text: "Get an answer with citations back to the exact pages." },
-  ];
-
+export default function EmptyState({ hasDocuments, onExampleClick }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border-800 bg-surface-800">
-        <BookOpenText size={26} className="text-accent-gold" strokeWidth={1.75} />
+    <div className="flex h-full flex-col items-center justify-center gap-7 px-6 text-center">
+      {/* Animated glowing orb */}
+      <div className="relative flex h-20 w-20 items-center justify-center">
+        <div className="animate-glow-pulse absolute inset-0 rounded-full bg-gradient-to-br from-accent-purple to-accent-cyan blur-xl" />
+        <div className="glass-panel relative flex h-16 w-16 items-center justify-center rounded-2xl">
+          <Sparkles size={28} className="text-accent-lavender" strokeWidth={1.75} />
+        </div>
       </div>
 
-      <div className="max-w-sm space-y-1.5">
-        <h2 className="font-display text-xl text-text-primary">
-          {hasDocuments ? "Ask something about your documents" : "Start by adding a document"}
+      <div className="max-w-md space-y-2">
+        <h2 className="font-display text-2xl font-semibold text-text-primary">
+          {hasDocuments ? (
+            "Ask something about your documents"
+          ) : (
+            <>
+              Your <span className="gradient-text">AI document</span> workspace
+            </>
+          )}
         </h2>
         <p className="text-sm leading-relaxed text-text-secondary">
-          Every answer is grounded in your uploaded PDFs, with citations
-          back to the exact source pages.
+          {hasDocuments
+            ? "Every answer is grounded in your uploaded PDFs, with citations back to the exact source pages."
+            : "Upload a PDF, ask anything about it, and get answers with citations back to the exact pages."}
         </p>
       </div>
 
-      <ol className="flex w-full max-w-sm flex-col gap-2.5 text-left">
-        {steps.map(({ icon: Icon, text }, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 rounded-xl border border-border-800 bg-surface-800/50 px-3.5 py-2.5"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-gold-soft font-mono text-[11px] text-accent-gold">
-              {i + 1}
-            </span>
-            <Icon size={15} className="shrink-0 text-text-muted" />
-            <span className="text-sm text-text-secondary">{text}</span>
-          </li>
-        ))}
-      </ol>
+      {!hasDocuments && (
+        <div className="glass-card flex items-center gap-2 rounded-full px-4 py-2 text-xs text-text-secondary">
+          <Upload size={13} className="text-accent-cyan" />
+          Use the upload panel in the sidebar to get started
+        </div>
+      )}
+
+      {hasDocuments && (
+        <div className="flex w-full max-w-md flex-col gap-2">
+          <p className="flex items-center justify-center gap-1.5 text-xs text-text-muted">
+            <Quote size={12} />
+            Try asking
+          </p>
+          {EXAMPLE_QUESTIONS.map((question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => onExampleClick?.(question)}
+              className="glass-card animate-fade-in-up rounded-xl px-4 py-2.5 text-left text-sm text-text-secondary transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-purple/30 hover:text-text-primary"
+            >
+              {question}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -8,10 +8,11 @@ rank-bm25
 fastapi
 uvicorn
 python-multipart
+'''
+cd D:\project_rag\rag-from-scratch
+.venv\Scripts\activate
+uvicorn api.app:app --reload
 
-# cd D:\project_rag\rag-from-scratch
-# .venv\Scripts\activate
-# uvicorn api.app:app --reload
-
-# cd D:\project_rag\rag-from-scratch\frontend
-# npm run dev
+cd D:\project_rag\rag-from-scratch\frontend
+npm run dev
+'''

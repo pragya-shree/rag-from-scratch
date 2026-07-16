@@ -32,13 +32,10 @@ export const apiClient = axios.create({
  * GET  /info             -> { ollama_model, embedding_model, hybrid_search, rerank, top_k, max_history }
  * GET  /documents        -> { documents: [{ filename }] }
  * POST /documents        -> multipart "file" -> { filename, total_documents, total_chunks }
+ * DELETE /documents/{filename} -> { filename, total_documents, total_chunks }
  * POST /chat              -> { question, top_k? } -> { answer, sources: [{ filename, pages }] }
  * POST /chat/stream        -> { question, top_k? } -> NDJSON stream (see chatStream.js)
  * POST /session/clear      -> {} -> { status: "cleared" }
- *
- * There is no DELETE /documents/{filename} endpoint on the backend, so
- * no such call exists here — the document list is append-only from the
- * frontend's perspective, matching what the API actually supports.
  */
 
 export async function getHealth() {
@@ -64,6 +61,13 @@ export async function uploadDocument(file, onUploadProgress) {
     headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress,
   });
+  return data;
+}
+
+export async function deleteDocument(filename) {
+  const { data } = await apiClient.delete(
+    `/documents/${encodeURIComponent(filename)}`
+  );
   return data;
 }
 
