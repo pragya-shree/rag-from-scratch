@@ -31,8 +31,28 @@ from src.reranker import rerank
 from src.generator import generate_answer, generate_answer_stream
 from src.metrics import timer, format_duration
 from src.config import TOP_K, HYBRID_SEARCH, RERANK, RERANK_CANDIDATE_POOL
-
 logger = logging.getLogger(__name__)
+
+# def _retrieve_chunks(question, index, chunks, top_k):
+#     pool_size = RERANK_CANDIDATE_POOL if RERANK else top_k
+#     matched_files = find_matching_files(question, chunks)
+#     if matched_files:
+#         logger.info("Matched filenames: %s", matched_files)
+#     # print("Matched files:", matched_files)
+
+#     with timer("retrieval") as t:
+#         if HYBRID_SEARCH:
+#             candidates = hybrid_retrieve(question, index, chunks, top_k=pool_size)
+#         else:
+#             candidates = retrieve(question, index, chunks, top_k=pool_size)
+
+#     logger.info("Stage 'retrieval' completed in %s", format_duration(t.elapsed))
+
+#     if RERANK:
+#         with timer("reranking") as t:
+#             candidates = rerank(question, candidates, top_k=top_k)
+
+#     return candidates
 
 
 def ingest():
@@ -60,7 +80,6 @@ def ingest():
         len(documents), len(chunks),
     )
     return chunks
-
 
 def _retrieve_chunks(question, index, chunks, top_k):
     """Route to hybrid (FAISS + BM25) or plain semantic retrieval, then

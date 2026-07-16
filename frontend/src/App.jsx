@@ -1,33 +1,56 @@
 import Sidebar from "./components/Sidebar";
 import ChatPage from "./pages/ChatPage";
 import { useDocuments } from "./hooks/useDocuments";
+import { useChat } from "./hooks/useChat";
+import { useBackendStatus } from "./hooks/useBackendStatus";
 import { clearSession } from "./services/api";
+import { getErrorMessage } from "./utils/errorMessages";
 
 export default function App() {
-  const { documents, isUploading, upload, remove } = useDocuments();
+  const {
+    documents,
+    isLoading: isLoadingDocuments,
+    isUploading,
+    uploadProgress,
+    upload,
+  } = useDocuments();
+
+  const { messages, isStreaming, error: chatError, sendMessage, stopStreaming, clearMessages } =
+    useChat();
+
+  const { isOnline: isBackendOnline, info } = useBackendStatus();
 
   const handleClearSession = async () => {
     try {
       await clearSession();
-      // Conversation memory lives inside ChatPage's useChat state; a
-      // full reload is the simplest way to reset both the backend
-      // session and the in-memory chat history together.
-      window.location.reload();
     } catch (err) {
-      console.error("Could not clear session:", err);
+      // Clearing local state below still gives the user a fresh chat
+      // even if the backend call failed (e.g. it was already offline).
+      console.error("Could not clear the backend session:", getErrorMessage(err));
     }
+    clearMessages();
   };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-ink-950">
       <Sidebar
         documents={documents}
+        isLoadingDocuments={isLoadingDocuments}
         isUploading={isUploading}
+        uploadProgress={uploadProgress}
         onUpload={upload}
-        onRemove={remove}
         onClearSession={handleClearSession}
+        isBackendOnline={isBackendOnline}
       />
-      <ChatPage documentCount={documents.length} />
+      <ChatPage
+        documentCount={documents.length}
+        messages={messages}
+        isStreaming={isStreaming}
+        chatError={chatError}
+        onSend={sendMessage}
+        onStop={stopStreaming}
+        info={info}
+      />
     </div>
   );
 }

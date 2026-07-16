@@ -18,8 +18,23 @@ def get_model():
     return _model
 
 
+# def embed_texts(texts):
+#     """Encode a list of strings into a float32 numpy array."""
+#     model = get_model()
+#     vectors = model.encode(texts, show_progress_bar=True)
+#     return np.array(vectors).astype("float32")
+
+import time
+
 def embed_texts(texts):
-    """Encode a list of strings into a float32 numpy array."""
+    start = time.time()
+
     model = get_model()
+
+    print("Model loaded in:", time.time() - start)
+
+    start = time.time()
     vectors = model.encode(texts, show_progress_bar=True)
+    print("Encoding took:", time.time() - start)
+
     return np.array(vectors).astype("float32")

@@ -3,13 +3,14 @@ import { ChevronDown, FileText } from "lucide-react";
 import { formatPageLabel } from "../utils/formatters";
 
 /**
- * A single citation, styled as a "highlighter tab": a compact pill that
- * expands to reveal the retrieved excerpt with an amber highlight wash,
- * and the page number stamped in mono type. This is the app's signature
- * visual element — citations should feel like annotated margin notes,
- * not chat-app footnotes.
+ * A single citation, styled as a "highlighter tab". The real backend
+ * (GET /chat, /chat/stream) returns only { filename, pages } per
+ * source — no excerpt text — so the expanded state is honest about
+ * that rather than fabricating a quote. The expand affordance stays
+ * (rather than removing citations' interactivity) since it costs
+ * nothing and degrades gracefully if the API adds excerpts later.
  */
-export default function SourceCard({ filename, pages, excerpt }) {
+export default function SourceCard({ filename, pages }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -37,8 +38,10 @@ export default function SourceCard({ filename, pages, excerpt }) {
 
       {isExpanded && (
         <div className="border-t border-border-800 px-3.5 py-3">
-          <p className="rounded-lg bg-accent-gold-soft px-3 py-2 text-sm leading-relaxed text-text-secondary">
-            {excerpt || "Excerpt not available."}
+          <p className="rounded-lg bg-accent-gold-soft px-3 py-2 text-xs italic leading-relaxed text-text-secondary">
+            The API returns the filename and page number for this citation,
+            but not the excerpt text itself — open {filename} at{" "}
+            {formatPageLabel(pages)} to read the source passage.
           </p>
         </div>
       )}

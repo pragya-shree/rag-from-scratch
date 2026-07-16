@@ -1,31 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  uploadDocument,
-  listDocuments,
-  deleteDocument,
-} from "../services/api";
+import { uploadDocument, listDocuments } from "../services/api";
+import { getErrorMessage } from "../utils/errorMessages";
 
 /**
- * Owns the uploaded-PDF list: fetching, uploading, deleting, and the
- * loading/error state around each of those actions. Kept separate from
- * chat state (useChat) since documents and conversation are different
- * concerns that happen to share a session.
+ * Owns the uploaded-PDF list: fetching and uploading. There is no
+ * delete/remove here — the backend has no DELETE /documents endpoint,
+ * so the list is append-only from the frontend's perspective, matching
+ * what the API actually supports.
  */
 export function useDocuments() {
   const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listDocuments();
-      setDocuments(data);
+      const docs = await listDocuments();
+      setDocuments(docs);
     } catch (err) {
-      setError("Could not load documents.");
-      console.error(err);
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -38,30 +35,37 @@ export function useDocuments() {
   const upload = useCallback(
     async (file) => {
       setIsUploading(true);
+      setUploadProgress(0);
       setError(null);
       try {
-        await uploadDocument(file);
-        await refresh();
+        await uploadDocument(file, (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(
+              Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            );
+          }
+        });
+        await refresh(); // backend re-ingests everything on every upload
+        return { success: true };
       } catch (err) {
-        setError(`Could not upload "${file.name}".`);
-        console.error(err);
+        const message = getErrorMessage(err);
+        setError(message);
+        return { success: false, message };
       } finally {
         setIsUploading(false);
+        setUploadProgress(0);
       }
     },
     [refresh]
   );
 
-  const remove = useCallback(async (filename) => {
-    setError(null);
-    try {
-      await deleteDocument(filename);
-      setDocuments((prev) => prev.filter((doc) => doc.filename !== filename));
-    } catch (err) {
-      setError(`Could not remove "${filename}".`);
-      console.error(err);
-    }
-  }, []);
-
-  return { documents, isLoading, isUploading, error, upload, remove, refresh };
+  return {
+    documents,
+    isLoading,
+    isUploading,
+    uploadProgress,
+    error,
+    upload,
+    clearError: () => setError(null),
+  };
 }

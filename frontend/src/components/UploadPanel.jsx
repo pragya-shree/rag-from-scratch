@@ -1,23 +1,41 @@
 import { useRef, useState } from "react";
-import { FileText, Trash2, Upload } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, Upload } from "lucide-react";
 import LoadingSpinner from "./LoadingSpinner";
-import { formatFileSize } from "../utils/formatters";
 
 /**
- * Drag-and-drop / click-to-browse PDF upload area, plus the list of
- * documents already in the session. Kept as one component since the
- * upload zone and the list share the same "documents" visual block in
- * the sidebar.
+ * Drag-and-drop / click-to-browse PDF upload, plus the list of
+ * documents already ingested. There is no remove/delete action here:
+ * the backend has no DELETE /documents endpoint, so a document, once
+ * uploaded, stays for the session — matching what the API supports.
  */
-export default function UploadPanel({ documents, isUploading, onUpload, onRemove }) {
+export default function UploadPanel({
+  documents,
+  isLoading,
+  isUploading,
+  uploadProgress,
+  onUpload,
+}) {
   const [isDragging, setIsDragging] = useState(false);
+  const [feedback, setFeedback] = useState(null); // { type: "success" | "error", message }
   const inputRef = useRef(null);
 
-  const handleFiles = (fileList) => {
+  const handleFiles = async (fileList) => {
     const file = fileList?.[0];
-    if (file && file.type === "application/pdf") {
-      onUpload(file);
+    if (!file) return;
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setFeedback({ type: "error", message: "Only PDF files are accepted." });
+      return;
     }
+
+    setFeedback(null);
+    const result = await onUpload(file);
+    if (result.success) {
+      setFeedback({ type: "success", message: `"${file.name}" is ready to query.` });
+    } else {
+      setFeedback({ type: "error", message: result.message });
+    }
+    setTimeout(() => setFeedback(null), 5000);
   };
 
   return (
@@ -49,19 +67,24 @@ export default function UploadPanel({ documents, isUploading, onUpload, onRemove
         }`}
       >
         {isUploading ? (
-          <LoadingSpinner size={20} />
+          <>
+            <LoadingSpinner size={20} />
+            <div className="h-1 w-full overflow-hidden rounded-full bg-surface-700">
+              <div
+                className="h-full rounded-full bg-accent-gold transition-all duration-200"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-text-secondary">Processing… {uploadProgress}%</p>
+          </>
         ) : (
-          <Upload size={20} className="text-text-secondary" strokeWidth={1.75} />
-        )}
-        <p className="text-xs leading-relaxed text-text-secondary">
-          {isUploading ? (
-            "Uploading…"
-          ) : (
-            <>
+          <>
+            <Upload size={20} className="text-text-secondary" strokeWidth={1.75} />
+            <p className="text-xs leading-relaxed text-text-secondary">
               <span className="text-accent-gold">Click to upload</span> or drag a PDF here
-            </>
-          )}
-        </p>
+            </p>
+          </>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -71,39 +94,49 @@ export default function UploadPanel({ documents, isUploading, onUpload, onRemove
         />
       </div>
 
+      {/* Upload feedback */}
+      {feedback && (
+        <div
+          role="status"
+          className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${
+            feedback.type === "success"
+              ? "bg-accent-gold-soft text-text-primary"
+              : "bg-red-950/40 text-red-300"
+          }`}
+        >
+          {feedback.type === "success" ? (
+            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-accent-gold" />
+          ) : (
+            <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-400" />
+          )}
+          <span>{feedback.message}</span>
+        </div>
+      )}
+
       {/* Uploaded list */}
-      {documents.length > 0 && (
+      {isLoading ? (
+        <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-text-muted">
+          <LoadingSpinner size={12} />
+          Loading documents…
+        </div>
+      ) : documents.length > 0 ? (
         <ul className="space-y-1.5">
           {documents.map((doc) => (
             <li
               key={doc.filename}
-              className="group flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-surface-800"
+              className="flex items-center gap-2 rounded-lg px-2.5 py-2"
             >
-              <span className="flex min-w-0 items-center gap-2">
-                <FileText size={14} className="shrink-0 text-text-muted" />
-                <span className="truncate text-sm text-text-secondary">
-                  {doc.filename}
-                </span>
-              </span>
-
-              <span className="flex shrink-0 items-center gap-1.5">
-                {doc.size != null && (
-                  <span className="font-mono text-[10px] text-text-muted">
-                    {formatFileSize(doc.size)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onRemove(doc.filename)}
-                  aria-label={`Remove ${doc.filename}`}
-                  className="rounded-md p-1 text-text-muted opacity-0 transition-opacity hover:text-accent-gold group-hover:opacity-100"
-                >
-                  <Trash2 size={13} />
-                </button>
+              <FileText size={14} className="shrink-0 text-text-muted" />
+              <span className="truncate text-sm text-text-secondary">
+                {doc.filename}
               </span>
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="px-2.5 py-1 text-xs text-text-muted">
+          No documents yet — upload one to get started.
+        </p>
       )}
     </div>
   );

@@ -1,13 +1,13 @@
 import ReactMarkdown from "react-markdown";
+import { AlertTriangle } from "lucide-react";
 import SourceCard from "./SourceCard";
 import LoadingSpinner from "./LoadingSpinner";
 
 /**
- * Renders one turn of the conversation. Deliberately not a "chat
- * bubble": the user's question is plain right-aligned text with a
- * thin amber rule (like an underlined note), while the assistant's
- * answer is a quiet card with markdown content and, when present, a
- * row of source citations beneath it.
+ * Renders one turn of the conversation. Not a chat bubble: the user's
+ * question is plain right-aligned text with a thin amber rule; the
+ * assistant's answer is a quiet card with markdown content and, when
+ * present, a row of source citations beneath it.
  */
 export default function ChatMessage({ message }) {
   if (message.role === "user") {
@@ -22,13 +22,13 @@ export default function ChatMessage({ message }) {
     );
   }
 
-  const isEmpty = !message.content && message.isStreaming;
+  const isWaitingForFirstToken = !message.content && message.isStreaming;
 
   return (
     <div className="px-6">
       <div className="max-w-2xl space-y-3">
         <div className="rounded-2xl border border-border-800 bg-surface-800 px-5 py-4 shadow-lg shadow-black/10">
-          {isEmpty ? (
+          {isWaitingForFirstToken ? (
             <div className="flex items-center gap-2 text-sm text-text-muted">
               <LoadingSpinner size={14} />
               Reading the documents…
@@ -41,6 +41,13 @@ export default function ChatMessage({ message }) {
               )}
             </div>
           )}
+
+          {message.wasInterrupted && (
+            <div className="mt-3 flex items-center gap-2 border-t border-border-800 pt-3 text-xs text-amber-400">
+              <AlertTriangle size={13} className="shrink-0" />
+              This response was interrupted. Try asking again.
+            </div>
+          )}
         </div>
 
         {message.sources?.length > 0 && (
@@ -50,7 +57,6 @@ export default function ChatMessage({ message }) {
                 key={`${source.filename}-${source.pages.join("-")}`}
                 filename={source.filename}
                 pages={source.pages}
-                excerpt={source.excerpt}
               />
             ))}
           </div>
